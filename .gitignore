@@ -1,0 +1,11 @@
+# Ignore MSI files
+*.msi
+
+# Ignore EXE files
+*.exe
+
+# Ignore binary files
+*.bin
+
+# Ignore PowerShell scripts
+*.ps1

@@ -4,6 +4,7 @@ import socketserver
 import subprocess
 import os
 import threading
+import socket
 
 def generate_payload(payload_type, lhost, lport, payload_file):
     """Generates the payload using msfvenom."""
@@ -98,7 +99,54 @@ def get_payload(payload_source, payload_type, lhost, lport, payload_file):
         print("[-] Invalid payload source. Choose '1' or '2'.")
         return None
 
-# Main execution block
+def get_all_local_ips():
+    """Get all available local IP addresses from network interfaces."""
+    local_ips = []
+    try:
+        # Get network interface information using ifconfig
+        output = subprocess.check_output(['ifconfig']).decode('utf-8')
+        
+        # Parse ifconfig output
+        current_interface = None
+        for line in output.split('\n'):
+            # New interface section
+            if line and not line.startswith('\t'):
+                current_interface = line.split(':')[0]
+            # Look for inet addresses
+            elif line.strip().startswith('inet '):
+                ip = line.strip().split(' ')[1]
+                # Skip localhost and duplicate IPs
+                if not ip.startswith('127.') and ip not in local_ips:
+                    local_ips.append(ip)
+        
+        # Sort IPs for better presentation
+        local_ips.sort()
+        
+        return local_ips if local_ips else ["127.0.0.1"]
+    except Exception as e:
+        print(f"[-] Error getting local IPs: {e}")
+        return ["127.0.0.1"]
+
+# Replace the existing get_local_ip() function with get_ip_from_user()
+def get_ip_from_user():
+    """Let user choose from available local IPs."""
+    local_ips = get_all_local_ips()
+    
+    print("\nAvailable local IP addresses:")
+    for i, ip in enumerate(local_ips, 1):
+        print(f"{i}. {ip}")
+    
+    while True:
+        try:
+            choice = input("\nSelect IP address (number) or enter custom IP: ")
+            if choice.isdigit() and 1 <= int(choice) <= len(local_ips):
+                return local_ips[int(choice) - 1]
+            elif socket.inet_aton(choice):  # Validate custom IP format
+                return choice
+        except:
+            print("Invalid selection. Please try again.")
+
+# In the main execution block, modify the LHOST input section:
 if __name__ == "__main__":
     # Get user input for payload configuration
     while True:
@@ -143,10 +191,12 @@ if __name__ == "__main__":
                 print("Invalid choice. Please enter a number between 1 and 8.")
 
         # Get network configuration
-        lhost = input("Enter LHOST (your IP): ")
+        print("\nSelect LHOST IP address:")
+        lhost = get_ip_from_user()
         lport = int(input("Enter LPORT: "))
     elif payload_source == "1":
-        lhost = input("Enter LHOST (your IP): ")
+        print("\nSelect LHOST IP address:")
+        lhost = get_ip_from_user()
         lport = int(input("Enter LPORT: "))
         payload_type = ""
 
